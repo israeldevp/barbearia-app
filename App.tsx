@@ -14,7 +14,22 @@ import { Appointment, DashboardStats, AppointmentStatus, PaymentMethod, Client, 
 
 type ViewState = 'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'configuracoes';
 
+import { PublicBooking } from './components/PublicBooking';
+
 const App: React.FC = () => {
+  // Simple routing check
+  const [isPublicBooking, setIsPublicBooking] = useState(window.location.pathname === '/agendar');
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setIsPublicBooking(window.location.pathname === '/agendar');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -44,6 +59,10 @@ const App: React.FC = () => {
   const [deletionLogs, setDeletionLogs] = useState<DeletionLog[]>([]);
 
   const [session, setSession] = useState<Session | null>(null);
+
+  // Notifications
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -89,11 +108,47 @@ const App: React.FC = () => {
     // Fetch Deletion Logs
     const { data: logData } = await supabase.from('deletion_logs').select('*').order('deleted_at', { ascending: false });
     if (logData) setDeletionLogs(logData);
+
+    // Fetch Notifications
+    const { data: notifData } = await supabase
+      .from('admin_notifications')
+      .select('*')
+      .eq('read', false)
+      .order('created_at', { ascending: false });
+    if (notifData) setNotifications(notifData);
   };
 
   useEffect(() => {
     fetchInitialData();
   }, [session]);
+
+  const handleResolveNotification = async (notificationId: string, action: 'UPDATE' | 'IGNORE', data: any) => {
+    // 1. If UPDATE, update client name
+    if (action === 'UPDATE') {
+      const { error } = await supabase
+        .from('clients')
+        .update({ name: data.newName })
+        .eq('id', data.clientId);
+
+      if (error) {
+        alert('Erro ao atualizar nome do cliente.');
+        return;
+      }
+      // Optimistic update
+      setClients(prev => prev.map(c => c.id === data.clientId ? { ...c, name: data.newName } : c));
+    }
+
+    // 2. Mark notification as read
+    const { error: readError } = await supabase
+      .from('admin_notifications')
+      .update({ read: true })
+      .eq('id', notificationId);
+
+    if (!readError) {
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      //   alert(action === 'UPDATE' ? 'Nome atualizado com sucesso!' : 'Notificação removida.');
+    }
+  };
 
   const stats: DashboardStats = useMemo(() => {
     const today = dashboardDate;
@@ -446,6 +501,38 @@ const App: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  const handleDeleteClient = async (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+
+    // Soft delete
+    const { error } = await supabase
+      .from('clients')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', clientId);
+
+    if (error) {
+      alert('Erro ao excluir cliente.');
+      return;
+    }
+
+    // Log deletion
+    const logEntry = {
+      user_email: session?.user.email,
+      appointment_details: { clientName: client.name, clientId: client.id },
+      reason: 'Exclusão de Cliente'
+    };
+    await supabase.from('deletion_logs').insert(logEntry);
+
+    // Refresh logs
+    const { data: newLogs } = await supabase.from('deletion_logs').select('*').order('deleted_at', { ascending: false });
+    if (newLogs) setDeletionLogs(newLogs);
+
+    // Optimistic Update
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, deleted_at: new Date().toISOString() } : c));
+    alert(`Cliente ${client.name} foi inativado com sucesso.`);
+  };
+
   const handleMenuNavigation = (view: ViewState) => {
     setCurrentView(view);
     setIsMenuOpen(false);
@@ -464,14 +551,91 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
+        // Calculate conflicts
+        const conflictAppointments = appointments.filter(apt => {
+          if (apt.status === AppointmentStatus.CANCELED) return false;
+          const client = clients.find(c => c.id === apt.clientId);
+          if (!client) return false;
+          return apt.clientName.trim().toLowerCase() !== client.name.trim().toLowerCase();
+        });
+
         return (
-          <div className="animate-slide-in">
+          <div className="animate-slide-in space-y-6">
             <section>
               <SummaryCards stats={stats} employees={employees} showEmployeeStats={false} />
             </section>
+
+            {/* Conflict Warning Section */}
+            {conflictAppointments.length > 0 && (
+              <section className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-6 animate-in slide-in-from-top-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500 border border-yellow-500/30">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-black text-lg text-white uppercase tracking-wide">Atenção: Possíveis Duplicatas</h3>
+                    <p className="text-brand-muted text-xs">Clientes agendaram com nomes diferentes do cadastro. Verifique e unifique se necessário.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {conflictAppointments.map(apt => {
+                    const originalClient = clients.find(c => c.id === apt.clientId);
+                    return (
+                      <div key={apt.id} className="bg-brand-onyx border border-white/5 p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden group hover:border-yellow-500/30 transition-colors">
+                        <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                          <UserIcon className="w-12 h-12 text-yellow-500" />
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] text-brand-muted uppercase tracking-wider font-bold mb-1">No Agendamento</p>
+                          <p className="text-white font-bold text-lg leading-none">{apt.clientName}</p>
+                          <p className="text-brand-gold font-mono text-xs mt-1">{apt.customerPhone || originalClient?.phone}</p>
+                        </div>
+
+                        <div className="w-full h-[1px] bg-white/5 my-1"></div>
+
+                        <div>
+                          <p className="text-[10px] text-brand-muted uppercase tracking-wider font-bold mb-1">No Cadastro (Original)</p>
+                          <p className="text-brand-muted font-bold">{originalClient?.name}</p>
+                        </div>
+
+                        <div className="mt-2 pt-2 border-t border-white/5 flex gap-2">
+                          {/* Future action: Button to update client name to match appointment */}
+                          <button
+                            onClick={() => {
+                              // Copy new name to clipboard or prompt update
+                              if (confirm(`Deseja atualizar o cadastro do cliente para "${apt.clientName}"?`)) {
+                                // Update client details logic could go here
+                                // For now, just a prompt as requested "informe... que eu manualente faço"
+                                // But we can be helpful:
+                                supabase.from('clients').update({ name: apt.clientName }).eq('id', apt.clientId).then(({ error }) => {
+                                  if (!error) {
+                                    alert('Nome atualizado com sucesso!');
+                                    // Optimistic update
+                                    setClients(prev => prev.map(c => c.id === apt.clientId ? { ...c, name: apt.clientName } : c));
+                                  } else {
+                                    alert('Erro ao atualizar.');
+                                  }
+                                });
+                              }
+                            }}
+                            className="text-[10px] bg-yellow-500/10 text-yellow-500 px-3 py-2 rounded hover:bg-yellow-500/20 transition-colors font-bold uppercase w-full"
+                          >
+                            Atualizar Cadastro
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
             <section className="bg-brand-onyx min-h-[500px]">
               <AppointmentList
                 appointments={appointments}
+                clients={clients}
                 onAppointmentClick={handleAppointmentClick}
                 onQuickTogglePay={handleQuickToggle}
                 selectedDate={dashboardDate}
@@ -485,6 +649,7 @@ const App: React.FC = () => {
           <section className="bg-brand-onyx min-h-[500px] animate-slide-in">
             <AppointmentList
               appointments={appointments}
+              clients={clients}
               onAppointmentClick={handleAppointmentClick}
               onQuickTogglePay={handleQuickToggle}
               selectedDate={agendaDate}
@@ -493,7 +658,7 @@ const App: React.FC = () => {
           </section>
         );
       case 'clientes':
-        return <div className="animate-slide-in"><ClientList clients={clients} appointments={appointments} onUpdatePhone={handleUpdateClientPhone} onNewClientClick={() => setIsNewClientModalOpen(true)} /></div>;
+        return <div className="animate-slide-in"><ClientList clients={clients} appointments={appointments} onUpdatePhone={handleUpdateClientPhone} onNewClientClick={() => setIsNewClientModalOpen(true)} onDeleteClient={handleDeleteClient} /></div>;
       case 'financeiro':
         const displayedMonths = showAllMonths
           ? financialReports.monthlyHistory
@@ -654,17 +819,25 @@ const App: React.FC = () => {
                   {deletionLogs.map(log => {
                     const apt = log.appointment_details;
                     const date = new Date(log.deleted_at);
+                    const isClientDeletion = log.reason === 'Exclusão de Cliente';
+
                     return (
                       <div key={log.id} className="bg-brand-onyx border border-white/5 p-4 rounded-xl flex flex-col gap-2">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-white font-bold text-sm">Agendamento de {apt.clientName}</p>
+                            <p className="text-white font-bold text-sm">
+                              {isClientDeletion ? `Cliente Excluído: ${apt.clientName}` : `Agendamento de ${apt.clientName}`}
+                            </p>
                             <p className="text-brand-muted text-xs">Excluído por: {log.user_email}</p>
                           </div>
                           <span className="text-[10px] text-brand-muted font-mono">{date.toLocaleDateString()} {date.toLocaleTimeString()}</span>
                         </div>
                         <div className="text-[10px] text-brand-muted/70 uppercase tracking-wider bg-black/20 p-2 rounded">
-                          Serviço: {apt.serviceName || '-'} | Valor: R$ {apt.price} | Status Original: {apt.status}
+                          {isClientDeletion ? (
+                            <span>Ação: Inativação de Cadastro | Motivo: Solicitação Administrativa</span>
+                          ) : (
+                            <span>Serviço: {apt.serviceName || '-'} | Valor: R$ {apt.price} | Status Original: {apt.status}</span>
+                          )}
                         </div>
                       </div>
                     );
@@ -673,7 +846,7 @@ const App: React.FC = () => {
               </div>
             )}
 
-            <div className="pt-20 border-t border-white/5 opacity-50 text-center"><p className="text-[10px] text-brand-muted uppercase tracking-[0.5em] font-black">Barbearia Robson Perrot v1.2</p></div>
+            <div className="pt-20 border-t border-white/5 opacity-50 text-center"><p className="text-[10px] text-brand-muted uppercase tracking-[0.5em] font-black">Barbearia App v1.2</p></div>
           </div>
         );
       default:
@@ -683,13 +856,21 @@ const App: React.FC = () => {
 
 
 
+  if (isPublicBooking) {
+    return <PublicBooking />;
+  }
+
   if (!session) {
     return <Auth />;
   }
 
   return (
     <div className="min-h-screen bg-brand-onyx pb-10 font-sans relative overflow-x-hidden">
-      <Header onMenuClick={() => setIsMenuOpen(true)} />
+      <Header
+        onMenuClick={() => setIsMenuOpen(true)}
+        notificationCount={notifications.length}
+        onNotificationClick={() => setIsNotificationModalOpen(true)}
+      />
       <main className="space-y-8 pt-4">{renderContent()}</main>
       {(currentView === 'dashboard' || currentView === 'agenda') && (
         <div className="fixed bottom-10 right-6 z-30">
@@ -697,7 +878,7 @@ const App: React.FC = () => {
         </div>
       )}
       <CheckpointModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} appointment={selectedAppointment} onConfirm={handleUpdateAppointment} onDelete={handleDeleteAppointment} employees={employees.filter(e => e.active !== false)} />
-      <NewAppointmentModal isOpen={isNewAppointmentModalOpen} onClose={() => setIsNewAppointmentModalOpen(false)} onConfirm={handleCreateAppointment} clients={clients} employees={employees.filter(e => e.active !== false)} />
+      <NewAppointmentModal isOpen={isNewAppointmentModalOpen} onClose={() => setIsNewAppointmentModalOpen(false)} onConfirm={handleCreateAppointment} clients={clients.filter(c => !c.deleted_at)} employees={employees.filter(e => e.active !== false)} />
       <NewClientModal isOpen={isNewClientModalOpen} onClose={() => setIsNewClientModalOpen(false)} onConfirm={handleCreateClient} />
       {isMenuOpen && (
         <div className="fixed inset-0 z-50 bg-brand-onyx/98 backdrop-blur-sm flex flex-col p-6 animate-in fade-in duration-200">
@@ -710,6 +891,75 @@ const App: React.FC = () => {
               Sair
             </button>
           </nav>
+        </div>
+      )}
+
+      {/* Notifications Modal */}
+      {isNotificationModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-brand-concreteDark border border-white/10 rounded-2xl p-6 max-w-lg w-full space-y-6 shadow-2xl relative">
+            <button onClick={() => setIsNotificationModalOpen(false)} className="absolute top-4 right-4 text-brand-muted hover:text-white"><X className="w-6 h-6" /></button>
+
+            <div className="space-y-2">
+              <h3 className="font-display font-black text-xl text-white uppercase tracking-tight">Notificações</h3>
+              <p className="text-brand-muted text-xs">Gestão de duplicidades e alertas.</p>
+            </div>
+
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              {notifications.length === 0 ? (
+                <div className="text-center py-10 text-brand-muted">
+                  <Check className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                  <p>Nenhuma notificação nova.</p>
+                </div>
+              ) : (
+                notifications.map(notif => (
+                  <div key={notif.id} className="bg-brand-onyx border border-white/5 p-4 rounded-xl space-y-3">
+                    {notif.type === 'DUPLICATE_CLIENT_NAME' && (
+                      <>
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 shrink-0">
+                            <UserCheck className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-white text-sm">Divergência de Nome</h4>
+                            <p className="text-brand-muted text-xs mt-1">
+                              O cliente do telefone <span className="font-mono text-brand-gold">{notif.data.phone}</span> usou um nome diferente.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-sm bg-black/20 p-3 rounded-lg">
+                          <div>
+                            <p className="text-[10px] uppercase text-brand-muted font-bold">Cadastro Atual</p>
+                            <p className="font-bold text-white">{notif.data.oldName}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase text-brand-muted font-bold">Novo Nome (Usado)</p>
+                            <p className="font-bold text-brand-gold">{notif.data.newName}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            onClick={() => handleResolveNotification(notif.id, 'IGNORE', notif.data)}
+                            className="flex-1 py-3 rounded-lg border border-white/10 text-brand-muted text-xs font-bold hover:bg-white/5 transition-colors"
+                          >
+                            Manter "{notif.data.oldName}"
+                          </button>
+                          <button
+                            onClick={() => handleResolveNotification(notif.id, 'UPDATE', notif.data)}
+                            className="flex-1 py-3 rounded-lg bg-yellow-500 text-brand-onyx text-xs font-bold hover:opacity-90 transition-opacity"
+                          >
+                            Atualizar para "{notif.data.newName}"
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

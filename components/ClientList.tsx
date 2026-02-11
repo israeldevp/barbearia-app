@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { User, Phone, ChevronRight, X, Calendar, Clock, Scissors, CreditCard, AlertTriangle, TrendingUp, Edit2, Save, UserPlus } from 'lucide-react';
+import { User, Phone, ChevronRight, X, Calendar, Clock, Scissors, CreditCard, AlertTriangle, TrendingUp, Edit2, Save, UserPlus, Trash2 } from 'lucide-react';
 import { Client, Appointment, AppointmentStatus } from '../types';
 
 interface ClientListProps {
@@ -9,12 +9,14 @@ interface ClientListProps {
   appointments: Appointment[];
   onUpdatePhone: (clientId: string, newPhone: string) => void;
   onNewClientClick?: () => void;
+  onDeleteClient?: (clientId: string) => void;
 }
 
-export const ClientList: React.FC<ClientListProps> = ({ clients, appointments, onUpdatePhone, onNewClientClick }) => {
+export const ClientList: React.FC<ClientListProps> = ({ clients, appointments, onUpdatePhone, onNewClientClick, onDeleteClient }) => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [editPhoneValue, setEditPhoneValue] = useState('');
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const getClientStats = (clientId: string) => {
     const clientAppointments = appointments.filter(a => a.clientId === clientId);
@@ -55,6 +57,21 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, appointments, o
     }
   };
 
+  const handleDeleteClick = () => {
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedClient && onDeleteClient) {
+      onDeleteClient(selectedClient.id);
+      setIsDeleteConfirmOpen(false);
+      setSelectedClient(null);
+    }
+  };
+
+  // Filter out deleted clients for the list view
+  const activeClients = clients.filter(c => !c.deleted_at);
+
   return (
     <div className="px-6 pt-4 pb-28">
       <div className="flex items-end justify-between mb-8">
@@ -69,11 +86,11 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, appointments, o
             </button>
           )}
         </div>
-        <span className="text-xs font-bold text-brand-muted uppercase tracking-widest border-b border-transparent pb-1">{clients.length} cadastrados</span>
+        <span className="text-xs font-bold text-brand-muted uppercase tracking-widest border-b border-transparent pb-1">{activeClients.length} cadastrados</span>
       </div>
 
       <div className="space-y-4">
-        {clients.map(client => (
+        {activeClients.map(client => (
           <div
             key={client.id}
             onClick={() => setSelectedClient(client)}
@@ -116,7 +133,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, appointments, o
                       <div className="w-1 h-4 bg-brand-gold"></div>
                       <h2 className="font-display font-bold text-lg text-white uppercase tracking-wide">Detalhes do Cliente</h2>
                     </div>
-                    <button onClick={() => { setSelectedClient(null); setIsEditingPhone(false); }} className="p-2 hover:bg-white/5 rounded-md text-brand-muted transition-colors">
+                    <button onClick={() => { setSelectedClient(null); setIsEditingPhone(false); setIsDeleteConfirmOpen(false); }} className="p-2 hover:bg-white/5 rounded-md text-brand-muted transition-colors">
                       <X className="w-5 h-5" />
                     </button>
                   </div>
@@ -231,13 +248,43 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, appointments, o
                   </div>
 
                   {/* Footer - Compact */}
-                  <div className="p-4 border-t border-white/5 bg-brand-onyx/30">
-                    <button
-                      onClick={() => { setSelectedClient(null); setIsEditingPhone(false); }}
-                      className="w-full py-3 bg-brand-concrete border border-white/10 rounded-lg font-display font-bold text-xs text-white uppercase tracking-widest hover:border-brand-gold/50 transition-all hover:bg-white/5"
-                    >
-                      Fechar
-                    </button>
+                  <div className="p-4 border-t border-white/5 bg-brand-onyx/30 flex gap-3">
+                    {!isDeleteConfirmOpen ? (
+                      <>
+                        <button
+                          onClick={() => { setSelectedClient(null); setIsEditingPhone(false); }}
+                          className="flex-1 py-3 bg-brand-concrete border border-white/10 rounded-lg font-display font-bold text-xs text-white uppercase tracking-widest hover:border-brand-gold/50 transition-all hover:bg-white/5"
+                        >
+                          Fechar
+                        </button>
+                        {onDeleteClient && (
+                          <button
+                            onClick={handleDeleteClick}
+                            className="w-12 flex items-center justify-center bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex-1 flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2">
+                        <p className="text-[10px] text-red-400 font-bold uppercase text-center mb-1">Confirmar Exclusão?</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setIsDeleteConfirmOpen(false)}
+                            className="flex-1 py-3 bg-brand-concrete border border-white/10 rounded-lg font-display font-bold text-xs text-white uppercase tracking-widest hover:bg-white/5"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={confirmDelete}
+                            className="flex-1 py-3 bg-red-500 rounded-lg font-display font-bold text-xs text-white uppercase tracking-widest hover:bg-red-600 shadow-lg shadow-red-500/20"
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

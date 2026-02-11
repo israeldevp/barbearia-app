@@ -24,12 +24,23 @@ export interface Client {
   phone: string;
   lastVisit?: string;
   totalSpent: number;
+  deleted_at?: string;
+}
+
+export interface Service {
+  id: string;
+  name: string;
+  price: number;
+  duration_minutes: number;
+  active: boolean;
 }
 
 export interface Appointment {
   id: string;
-  clientId: string;
+  clientId?: string;
   clientName: string;
+  customerName?: string;
+  customerPhone?: string;
   employeeName: string;
   serviceName: string;
   timestamp: Date;
@@ -55,4 +66,18 @@ export interface DeletionLog {
   appointment_details: any;
   reason?: string;
   deleted_at: string;
+}
+
+export interface AdminNotification {
+  id: string;
+  type: 'DUPLICATE_CLIENT_NAME';
+  data: {
+    clientId: string;
+    oldName: string;
+    newName: string;
+    appointmentId?: string;
+    phone: string;
+  };
+  read: boolean;
+  created_at: string;
 }
