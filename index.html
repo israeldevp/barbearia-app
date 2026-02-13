@@ -1,78 +1,103 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Barbearia App</title>
-    
-    <!-- PWA & Mobile Optimization -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#050505">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              display: ['Archivo', 'sans-serif'],
-            },
-            colors: {
-              brand: {
-                onyx: '#050505',
-                concrete: '#2A2A2A',
-                concreteDark: '#1A1A1A',
-                gold: '#D4AF37',
-                goldDim: '#8A7224',
-                text: '#E5E5E5',
-                muted: '#888888',
-              }
-            },
-            backgroundImage: {
-              'gold-gradient': 'linear-gradient(135deg, #D4AF37 0%, #B5952F 100%)',
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Barbearia App</title>
+
+  <!-- PWA & Mobile Optimization -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#050505">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Archivo', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              onyx: '#050505',
+              concrete: '#2A2A2A',
+              concreteDark: '#1A1A1A',
+              gold: '#D4AF37',
+              goldDim: '#8A7224',
+              text: '#E5E5E5',
+              muted: '#888888',
             }
+          },
+          backgroundImage: {
+            'gold-gradient': 'linear-gradient(135deg, #D4AF37 0%, #B5952F 100%)',
           }
         }
       }
-    </script>
-    <style>
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      .font-stretch-expanded { font-variation-settings: 'wdth' 125; }
-      
-      /* Smooth touch scrolling */
-      .overflow-x-auto {
-        -webkit-overflow-scrolling: touch;
+    }
+  </script>
+  <style>
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .font-stretch-expanded {
+      font-variation-settings: 'wdth' 125;
+    }
+
+    /* Smooth touch scrolling */
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Native feeling for mobile inputs */
+    input,
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      overscroll-behavior-y: contain;
+    }
+
+    /* Animations */
+    @keyframes slideInRight {
+      from {
+        transform: translateX(20px);
+        opacity: 0;
       }
 
-      /* Native feeling for mobile inputs */
-      input, button {
-        -webkit-tap-highlight-color: transparent;
+      to {
+        transform: translateX(0);
+        opacity: 1;
       }
-      
-      body {
-        overscroll-behavior-y: contain;
-      }
+    }
 
-      /* Animations */
-      @keyframes slideInRight {
-        from { transform: translateX(20px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
-      .animate-slide-in { animation: slideInRight 0.3s ease-out forwards; }
-    </style>
-    <link rel="stylesheet" href="/index.css">
-  </head>
-  <body class="bg-brand-onyx text-brand-text antialiased selection:bg-brand-gold selection:text-brand-onyx">
-    <div id="root"></div>
-    <!-- Ponto de entrada crucial para a aplicação carregar -->
-    <script type="module" src="/index.tsx"></script>
-  </body>
+    .animate-slide-in {
+      animation: slideInRight 0.3s ease-out forwards;
+    }
+  </style>
+  <link rel="stylesheet" href="/index.css">
+</head>
+
+<body class="bg-brand-onyx text-brand-text antialiased selection:bg-brand-gold selection:text-brand-onyx">
+  <div id="root"></div>
+  <!-- Ponto de entrada crucial para a aplicação carregar -->
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>

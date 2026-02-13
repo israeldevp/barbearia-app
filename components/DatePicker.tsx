@@ -49,9 +49,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onChange, 
   };
 
   const isSameDay = (d1: Date, d2: Date) => {
-    return d1.getDate() === d2.getDate() && 
-           d1.getMonth() === d2.getMonth() && 
-           d1.getFullYear() === d2.getFullYear();
+    return d1.getDate() === d2.getDate() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getFullYear() === d2.getFullYear();
   };
 
   const isToday = (d: Date) => isSameDay(d, new Date());
@@ -80,8 +80,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onChange, 
           onClick={(e) => { e.preventDefault(); handleDateClick(day); }}
           className={`
             h-9 w-9 flex items-center justify-center rounded-lg text-sm font-bold transition-all
-            ${isSelected 
-              ? 'bg-brand-gold text-brand-onyx shadow-lg shadow-brand-gold/20' 
+            ${isSelected
+              ? 'bg-brand-gold text-brand-onyx shadow-lg shadow-brand-gold/20'
               : 'text-brand-text hover:bg-white/5 hover:text-white'
             }
             ${isCurrentDay && !isSelected ? 'border border-brand-gold/30 text-brand-gold' : ''}
@@ -105,10 +105,10 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onChange, 
     <div className="relative" ref={containerRef}>
       {label && (
         <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest flex items-center gap-2 mb-2">
-           <CalendarIcon className="w-3 h-3" /> {label}
+          <CalendarIcon className="w-3 h-3" /> {label}
         </label>
       )}
-      
+
       {/* TRIGGER BUTTON */}
       {variant === 'input' ? (
         <button
@@ -137,7 +137,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onChange, 
             {isToday(selectedDate) ? 'HOJE' : selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).toUpperCase().replace('.', '')}
           </span>
           <div className={`p-1 rounded-full ${isOpen ? 'bg-brand-gold text-brand-onyx' : 'bg-brand-onyx border border-white/5'}`}>
-             <CalendarIcon className="w-3.5 h-3.5" />
+            <CalendarIcon className="w-3.5 h-3.5" />
           </div>
         </button>
       )}
@@ -174,15 +174,15 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onChange, 
           <div className="grid grid-cols-7 gap-1">
             {renderCalendar()}
           </div>
-          
+
           {/* Today Shortcut */}
           {!isToday(selectedDate) && (
-             <button 
-                onClick={() => { onChange && onChange(new Date()); setIsOpen(false); }}
-                className="w-full mt-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold text-brand-gold uppercase tracking-widest transition-colors"
-             >
-                Voltar para Hoje
-             </button>
+            <button
+              onClick={() => { onChange && onChange(new Date()); setIsOpen(false); }}
+              className="w-full mt-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold text-brand-gold uppercase tracking-widest transition-colors"
+            >
+              Voltar para Hoje
+            </button>
           )}
         </div>
       )}

@@ -118,15 +118,13 @@ export const PublicBooking: React.FC = () => {
                     const bookedStart = new Date(slot.timestamp);
                     const bookedEnd = new Date(bookedStart.getTime() + slot.duration * 60000);
 
-                    // Simple overlap check: 
-                    // New slot starts at 'slotDate', ends at 'slotDate + 30'
-                    // We check if this new slot interacts with any existing booking
-                    const newSlotEnd = new Date(slotDate.getTime() + 30 * 60000); // Assuming 30 min slots for simplicity of display, though service might be longer
+                    const serviceDuration = selectedService?.duration_minutes || 30;
+                    const newSlotEnd = new Date(slotDate.getTime() + serviceDuration * 60000);
 
                     // Check if the NEW slot overlaps with EXISTING booking
+                    // Standard overlap check: (StartA < EndB) and (EndA > StartB)
                     return (
-                        (slotDate >= bookedStart && slotDate < bookedEnd) || // Start is inside
-                        (newSlotEnd > bookedStart && newSlotEnd <= bookedEnd) // End is inside
+                        slotDate < bookedEnd && newSlotEnd > bookedStart
                     );
                 });
 

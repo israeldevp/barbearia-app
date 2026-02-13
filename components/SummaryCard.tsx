@@ -15,18 +15,18 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ stats, employees = [
     <div className="w-full flex flex-col gap-6">
       <div className="w-full overflow-x-auto no-scrollbar py-4 pl-6">
         <div className="flex gap-4 min-w-max pr-6">
-          
+
           {/* Revenue Card */}
           <div className="bg-brand-concrete relative overflow-hidden p-6 rounded-xl w-64 border border-white/10 shadow-2xl flex flex-col justify-between h-40 group">
             <div className="absolute top-0 right-0 w-24 h-24 bg-brand-gold/10 blur-3xl rounded-full -mr-10 -mt-10"></div>
-            
+
             <div className="flex justify-between items-start z-10">
               <span className="font-display text-xs font-bold text-brand-muted uppercase tracking-[0.15em] font-stretch-expanded">Faturamento</span>
               <div className="p-2 bg-brand-onyx rounded-md border border-white/5">
                 < DollarSign className="w-4 h-4 text-brand-gold" />
               </div>
             </div>
-            
+
             <div className="z-10">
               <span className="font-display text-3xl font-black text-white tracking-tight">
                 R$ {stats.totalRevenue.toFixed(2)}
@@ -78,8 +78,8 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ stats, employees = [
             {employees.map((emp) => {
               const revenue = stats.revenueByEmployee[emp.name] || 0;
               return (
-                <button 
-                  key={emp.id} 
+                <button
+                  key={emp.id}
                   onClick={() => onEmployeeClick?.(emp.name)}
                   className="bg-brand-concreteDark border border-white/5 rounded-xl p-5 flex flex-col gap-3 text-left hover:border-brand-gold/40 hover:bg-brand-concrete/30 transition-all group shadow-lg"
                 >

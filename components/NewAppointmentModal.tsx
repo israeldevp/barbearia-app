@@ -20,7 +20,7 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ isOpen
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [hour, setHour] = useState(new Date().getHours().toString().padStart(2, '0'));
   const [minute, setMinute] = useState('00');
-  
+
   const [suggestions, setSuggestions] = useState<Client[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
@@ -33,7 +33,7 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ isOpen
 
   useEffect(() => {
     if (clientName.length > 1) {
-      const filtered = clients.filter(c => 
+      const filtered = clients.filter(c =>
         c.name.toLowerCase().includes(clientName.toLowerCase())
       ).slice(0, 4);
       setSuggestions(filtered);
@@ -70,9 +70,9 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ isOpen
 
       const timestamp = new Date(selectedDate);
       timestamp.setHours(cleanHour, parseInt(minute), 0, 0);
-      
+
       onConfirm(clientName, timestamp, serviceName || 'Serviço a definir', employeeName, phone);
-      
+
       setClientName('');
       setPhone('');
       setServiceName('');
@@ -101,7 +101,7 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ isOpen
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-brand-onyx/95 backdrop-blur-sm transition-opacity animate-in fade-in duration-200">
       <div className="w-full sm:w-96 bg-brand-concrete border-t sm:border border-white/10 rounded-t-2xl sm:rounded-xl shadow-2xl transform transition-transform animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 overflow-visible max-h-[90vh] flex flex-col">
-        
+
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-white/5 shrink-0">
           <div className="flex items-center gap-2">
@@ -115,7 +115,7 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ isOpen
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto no-scrollbar">
-          
+
           {/* Client Input */}
           <div className="space-y-2 relative" ref={suggestionRef}>
             <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest flex items-center gap-2">
@@ -180,8 +180,8 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ isOpen
                   onClick={() => setEmployeeName(emp.name)}
                   className={`
                     py-3 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all
-                    ${employeeName === emp.name 
-                      ? 'bg-brand-gold border-brand-gold text-brand-onyx shadow-lg shadow-brand-gold/20' 
+                    ${employeeName === emp.name
+                      ? 'bg-brand-gold border-brand-gold text-brand-onyx shadow-lg shadow-brand-gold/20'
                       : 'bg-brand-onyx border-white/10 text-brand-muted hover:border-white/20 hover:text-white'}
                   `}
                 >
@@ -207,39 +207,39 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ isOpen
 
           {/* Date & Time Grid */}
           <div className="grid grid-cols-2 gap-4">
-             <DatePicker 
-                label="DATA"
-                selectedDate={selectedDate}
-                onChange={setSelectedDate}
-                variant="input"
-              />
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest flex items-center gap-2">
-                  <Clock className="w-3 h-3" /> Horário
-                </label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={hour}
-                    onChange={handleHourChange}
-                    onBlur={handleHourBlur}
-                    className="w-full bg-brand-onyx border border-white/10 rounded-lg py-4 text-white font-display font-bold text-lg text-center focus:border-brand-gold focus:ring-0 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="text-white/20 font-bold text-xl">:</span>
-                  <button
-                    type="button"
-                    onClick={toggleMinute}
-                    className="w-full py-4 rounded-lg font-display font-bold text-lg transition-all border bg-brand-gold text-brand-onyx border-brand-gold"
-                  >
-                    {minute}
-                  </button>
-                </div>
+            <DatePicker
+              label="DATA"
+              selectedDate={selectedDate}
+              onChange={setSelectedDate}
+              variant="input"
+            />
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest flex items-center gap-2">
+                <Clock className="w-3 h-3" /> Horário
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  min="0"
+                  max="23"
+                  value={hour}
+                  onChange={handleHourChange}
+                  onBlur={handleHourBlur}
+                  className="w-full bg-brand-onyx border border-white/10 rounded-lg py-4 text-white font-display font-bold text-lg text-center focus:border-brand-gold focus:ring-0 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-white/20 font-bold text-xl">:</span>
+                <button
+                  type="button"
+                  onClick={toggleMinute}
+                  className="w-full py-4 rounded-lg font-display font-bold text-lg transition-all border bg-brand-gold text-brand-onyx border-brand-gold"
+                >
+                  {minute}
+                </button>
               </div>
+            </div>
           </div>
 
-          <button 
+          <button
             type="submit"
             className="w-full bg-gold-gradient text-brand-onyx font-display font-black text-sm uppercase tracking-widest py-4 rounded-lg hover:brightness-110 transition-all active:scale-[0.98] shadow-lg shadow-brand-gold/10 mt-2"
           >

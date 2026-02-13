@@ -90,9 +90,25 @@ const App: React.FC = () => {
     if (clientData) setClients(clientData);
 
     // Fetch Appointments
-    const { data: aptData } = await supabase.from('appointments').select('*').order('timestamp', { ascending: false });
-    if (aptData) {
-      setAppointments(aptData.map((apt: any) => ({
+    const { data: aptData } = await supabase.from('appointments').select('*').order('timestamp', { ascending: true });
+
+    // Check for No-Shows (15 min tolerance)
+    const now = new Date();
+    const toleranceMs = 15 * 60 * 1000;
+
+    const processedAppointments = aptData ? await Promise.all(aptData.map(async (apt: any) => {
+      const aptDate = new Date(apt.timestamp);
+      // Ensure we are comparing correctly
+      if (apt.status === 'SCHEDULED' && (now.getTime() - aptDate.getTime() > toleranceMs)) {
+        // Mark as NO_SHOW in DB
+        await supabase.from('appointments').update({ status: 'NO_SHOW' }).eq('id', apt.id);
+        return { ...apt, status: 'NO_SHOW' };
+      }
+      return apt;
+    })) : [];
+
+    if (processedAppointments.length > 0) {
+      setAppointments(processedAppointments.map((apt: any) => ({
         ...apt,
         clientId: apt.client_id,
         clientName: apt.client_name,
@@ -243,6 +259,11 @@ const App: React.FC = () => {
     };
 
     if (newTimestamp) {
+      const hours = newTimestamp.getHours();
+      if (hours < 9 || hours >= 18) {
+        alert('O agendamento deve ser entre 09:00 e 18:00.');
+        return;
+      }
       updates.timestamp = newTimestamp.toISOString();
     }
 
@@ -317,6 +338,13 @@ const App: React.FC = () => {
       apt.timestamp.getTime() === timestamp.getTime() &&
       apt.status !== AppointmentStatus.CANCELED
     );
+
+    // Validate Business Hours (09:00 - 18:00)
+    const hours = timestamp.getHours();
+    if (hours < 9 || hours >= 18) {
+      alert('O agendamento deve ser entre 09:00 e 18:00.');
+      return;
+    }
 
     if (appointmentsAtSameTime.length >= 2) {
       alert(`Ops! Já existem 2 agendamentos para ${timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Por favor, escolha outro horário.`);
